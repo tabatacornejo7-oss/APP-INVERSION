@@ -3,84 +3,297 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f6f4ef">
-  <title>Colores — tu paleta</title>
+  <meta name="theme-color" content="#f3f5f2">
+  <title>Mi simulador de inversión</title>
   <style>
-    :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #20211f; background: #f6f4ef; }
+    :root {
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #1d2b25; background: #f3f5f2; font-synthesis: none; text-rendering: optimizeLegibility;
+      --green: #176b4a; --muted: #748079; --line: #e6ebe6; --card: #fff;
+    }
     * { box-sizing: border-box; }
-    body { min-height: 100vh; margin: 0; display: grid; place-items: center; padding: 32px 18px; }
-    main { width: min(760px, 100%); }
-    .eyebrow { color: #75746d; font-size: .76rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
-    h1 { margin: 10px 0 8px; font-size: clamp(2.2rem, 7vw, 4rem); letter-spacing: -.065em; line-height: 1; }
-    .intro { margin: 0; color: #6d6c66; font-size: 1.05rem; }
-    .palette { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin: 34px 0 24px; }
-    .swatch { min-width: 0; }
-    .color { height: clamp(130px, 28vw, 220px); border-radius: 18px; box-shadow: inset 0 0 0 1px #0000000d; }
-    .hex { display: block; width: 100%; margin-top: 10px; padding: 8px 3px; border: 0; border-radius: 8px; background: transparent; color: #383832; font: 700 .83rem ui-monospace, SFMono-Regular, Consolas, monospace; text-align: center; cursor: pointer; }
-    .hex:hover, .hex:focus-visible { background: #e9e6de; outline: none; }
-    .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
-    button { border: 0; border-radius: 999px; padding: 13px 20px; font: inherit; font-weight: 700; cursor: pointer; transition: transform .15s, background .15s; }
-    button:hover { transform: translateY(-1px); }
-    .generate { background: #23241f; color: white; }
-    .generate:hover { background: #41423a; }
-    .hint { color: #77766f; font-size: .88rem; }
-    #notice { min-height: 1.3em; margin-top: 13px; color: #55745a; font-size: .9rem; }
-    @media (max-width: 520px) { .palette { gap: 7px; } .color { border-radius: 11px; } .hex { font-size: .68rem; } }
+    body { margin: 0; min-width: 320px; }
+    .shell { width: min(1120px, calc(100% - 36px)); margin: 0 auto; padding: 38px 0 56px; }
+    header { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 34px; }
+    .brand { display: flex; align-items: center; gap: 11px; font-weight: 750; letter-spacing: -.03em; }
+    .brand-mark { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 11px; background: #dff1e6; color: var(--green); font-size: 19px; }
+    .live-tag { border: 1px solid #dae3db; border-radius: 99px; padding: 7px 11px; color: #64746a; font-size: .75rem; font-weight: 650; }
+    .hero { margin-bottom: 26px; }
+    .eyebrow { margin: 0 0 10px; color: var(--green); font-size: .73rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(2rem, 5vw, 3.35rem); line-height: 1.05; letter-spacing: -.065em; }
+    .lead { max-width: 650px; margin: 12px 0 0; color: var(--muted); font-size: 1rem; line-height: 1.6; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(320px, .92fr); gap: 18px; align-items: start; }
+    .card { background: var(--card); border: 1px solid #e9ede9; border-radius: 18px; box-shadow: 0 8px 28px #1c39220a; }
+    .setup { padding: 23px; }
+    .card-title { margin: 0; font-size: 1.05rem; letter-spacing: -.025em; }
+    .card-subtitle { margin: 6px 0 21px; color: var(--muted); font-size: .86rem; line-height: 1.45; }
+    .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 23px; }
+    .field label { display: block; margin-bottom: 8px; color: #627067; font-size: .78rem; font-weight: 700; }
+    .input-wrap { display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid #dfe6df; border-radius: 10px; background: #fff; }
+    .input-wrap:focus-within { border-color: #77aa8d; box-shadow: 0 0 0 3px #eaf4ed; }
+    .input-wrap span { color: #849087; }
+    input[type="number"] { width: 100%; min-width: 0; padding: 11px 0; border: 0; outline: none; color: #1d2b25; background: transparent; font: inherit; font-weight: 700; }
+    .company-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin: 0 0 10px; }
+    .company-heading strong { font-size: .85rem; }
+    .company-heading span { color: #818a83; font-size: .73rem; }
+    .company-list { display: grid; gap: 8px; }
+    .company-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(116px, 145px); align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid #edf0ed; border-radius: 12px; }
+    .company-name { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .dot { flex: none; width: 10px; height: 10px; border-radius: 50%; }
+    .company-name b { display: block; overflow: hidden; font-size: .88rem; text-overflow: ellipsis; white-space: nowrap; }
+    .company-name small { display: block; margin-top: 3px; color: #89928b; font-size: .7rem; }
+    .money-entry { display: flex; align-items: center; gap: 5px; border: 1px solid #e3e9e3; border-radius: 9px; padding: 0 9px; }
+    .money-entry span { color: #818a83; font-size: .8rem; }
+    .money-entry input { padding: 8px 0; text-align: right; font-size: .88rem; }
+    .allocation-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 14px; color: #69776e; font-size: .81rem; }
+    .allocation-foot strong { color: #26392e; }
+    .allocation-foot.over strong, .allocation-foot.over { color: #b54b41; }
+    .split-button { padding: 0; border: 0; color: var(--green); background: transparent; font: inherit; font-size: .78rem; font-weight: 750; cursor: pointer; }
+    .split-button:hover { text-decoration: underline; }
+    .results { display: grid; gap: 16px; }
+    .summary { padding: 22px; background: #153f2f; color: white; border-color: #153f2f; }
+    .summary .card-subtitle { margin: 0 0 18px; color: #c1d5ca; }
+    .result-total { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .metric-label { display: block; margin-bottom: 6px; color: #b9d1c4; font-size: .75rem; }
+    .metric-value { font-size: clamp(1.25rem, 3vw, 1.75rem); font-weight: 780; letter-spacing: -.045em; }
+    .metric-value.gain { color: #b9ebcb; }
+    .chart-card { padding: 20px 20px 14px; }
+    .chart-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    .chart-caption { margin: 5px 0 0; color: var(--muted); font-size: .76rem; }
+    .chart-legend { display: flex; flex-wrap: wrap; gap: 8px 12px; margin: 14px 0 3px; }
+    .legend-item { display: inline-flex; align-items: center; gap: 5px; color: #657168; font-size: .69rem; }
+    .legend-line { width: 12px; height: 3px; border-radius: 9px; }
+    canvas { display: block; width: 100%; height: 160px; }
+    .table-card { padding: 20px; }
+    .table-scroll { overflow-x: auto; }
+    table { width: 100%; margin-top: 12px; border-collapse: collapse; white-space: nowrap; }
+    th { padding: 9px 7px; color: #859087; font-size: .66rem; font-weight: 700; text-align: right; }
+    th:first-child, td:first-child { padding-left: 0; text-align: left; }
+    td { padding: 11px 7px; border-top: 1px solid #edf0ed; color: #35433a; font-size: .78rem; text-align: right; }
+    .cell-company { font-weight: 700; }
+    .positive { color: #21724b; font-weight: 750; }
+    .negative { color: #b54b41; font-weight: 750; }
+    .notice { margin-top: 19px; padding: 14px 16px; border: 1px solid #e6ebe5; border-radius: 12px; color: #6c786f; background: #f8faf7; font-size: .76rem; line-height: 1.55; }
+    .notice b { color: #435248; }
+    .source { margin-top: 10px; color: #8b938d; font-size: .69rem; }
+    .source a { color: #64776b; }
+    .error { min-height: 1.2em; margin-top: 9px; color: #b54b41; font-size: .77rem; }
+    @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } .results { grid-row: 2; } }
+    @media (max-width: 500px) { .shell { width: min(100% - 24px, 600px); padding-top: 22px; } header { margin-bottom: 27px; } .setup { padding: 18px 14px; } .company-row { grid-template-columns: minmax(0,1fr) 120px; gap: 7px; padding: 9px; } .chart-card, .table-card, .summary { padding: 17px 14px; } .live-tag { font-size: .67rem; } }
   </style>
 </head>
 <body>
-  <main>
-    <div class="eyebrow">Una herramienta pequeña para ideas grandes</div>
-    <h1>Tu próxima paleta.</h1>
-    <p class="intro">Cinco colores al azar. Haz clic en un código para copiarlo.</p>
-    <section class="palette" id="palette" aria-label="Paleta de colores"></section>
-    <div class="actions">
-      <button class="generate" id="generate" type="button">Generar colores <span aria-hidden="true">↗</span></button>
-      <span class="hint">También puedes pulsar la barra espaciadora.</span>
-    </div>
-    <div id="notice" role="status" aria-live="polite"></div>
-  </main>
-  <script>
-    const palette = document.querySelector('#palette');
-    const notice = document.querySelector('#notice');
-    const randomHex = () => '#' + Math.floor(Math.random() * 0x1000000).toString(16).padStart(6, '0').toUpperCase();
+  <div class="shell">
+    <header>
+      <div class="brand"><span class="brand-mark" aria-hidden="true">↗</span> Mi simulador</div>
+      <div class="live-tag">Simulación · EUR</div>
+    </header>
+    <section class="hero">
+      <p class="eyebrow">Invierte para aprender</p>
+      <h1>¿Y si invirtieras hoy?</h1>
+      <p class="lead">Reparte tu dinero entre cinco empresas españolas y mira cómo podría evolucionar si repitiera su rentabilidad histórica.</p>
+    </section>
 
-    function generatePalette() {
-      palette.replaceChildren();
-      for (let i = 0; i < 5; i++) {
-        const hex = randomHex();
-        const swatch = document.createElement('div');
-        swatch.className = 'swatch';
-        const color = document.createElement('div');
-        color.className = 'color';
-        color.style.backgroundColor = hex;
-        const code = document.createElement('button');
-        code.className = 'hex';
-        code.type = 'button';
-        code.textContent = hex;
-        code.setAttribute('aria-label', `Copiar el color ${hex}`);
-        code.addEventListener('click', async () => {
-          try {
-            await navigator.clipboard.writeText(hex);
-            notice.textContent = `${hex} copiado al portapapeles`;
-          } catch {
-            notice.textContent = `Código de color: ${hex}`;
-          }
-        });
-        swatch.append(color, code);
-        palette.append(swatch);
-      }
-      notice.textContent = '';
+    <div class="layout" id="app" hidden>
+      <section class="card setup" aria-labelledby="setup-title">
+        <h2 class="card-title" id="setup-title">Prepara tu simulación</h2>
+        <p class="card-subtitle">Elige cuánto dinero tienes y cuánto pondrías en cada empresa.</p>
+        <div class="fields">
+          <div class="field">
+            <label for="capital">Dinero disponible</label>
+            <div class="input-wrap"><span>€</span><input id="capital" type="number" min="0" step="100" value="10000" inputmode="decimal"></div>
+          </div>
+          <div class="field">
+            <label for="years">Tiempo invertido</label>
+            <div class="input-wrap"><input id="years" type="number" min="1" max="10" step="1" value="3" inputmode="numeric"><span>años</span></div>
+          </div>
+        </div>
+        <div class="company-heading"><strong>Tu reparto</strong><span>Importes en euros</span></div>
+        <div class="company-list" id="companies"></div>
+        <div class="allocation-foot" id="allocation-foot">
+          <span>Repartido <strong id="allocated">0 €</strong> de <strong id="capital-label">10.000 €</strong></span>
+          <button class="split-button" id="split" type="button">Repartir a partes iguales</button>
+        </div>
+        <div class="error" id="error" role="status" aria-live="polite"></div>
+      </section>
+
+      <section class="results" aria-label="Resultados de la simulación">
+        <div class="card summary">
+          <h2 class="card-title">Tu escenario estimado</h2>
+          <p class="card-subtitle" id="summary-caption">En 3 años, siguiendo el promedio histórico.</p>
+          <div class="result-total">
+            <div><span class="metric-label">Invertirías</span><div class="metric-value" id="total-invested">—</div></div>
+            <div><span class="metric-label">Valor estimado</span><div class="metric-value gain" id="total-estimated">—</div></div>
+          </div>
+          <div style="margin-top:17px"><span class="metric-label">Ganancia o pérdida estimada</span><div class="metric-value gain" id="total-gain">—</div></div>
+        </div>
+        <div class="card chart-card">
+          <div class="chart-head"><div><h2 class="card-title">Así se movieron</h2><p class="chart-caption">Evolución histórica, iniciando todas en 100 €</p></div></div>
+          <div class="chart-legend" id="legend"></div>
+          <canvas id="history-chart" role="img" aria-label="Gráfico de evolución histórica de las cinco acciones"></canvas>
+        </div>
+        <div class="card table-card">
+          <h2 class="card-title">Detalle por empresa</h2>
+          <div class="table-scroll">
+            <table>
+              <thead><tr><th>Empresa</th><th>Histórico anual*</th><th>Invertido</th><th>En el plazo</th></tr></thead>
+              <tbody id="breakdown"></tbody>
+            </table>
+          </div>
+          <p class="source">* Rentabilidad anual compuesta de los últimos 10 años, con dividendos reinvertidos. <a href="https://finance.yahoo.com/" target="_blank" rel="noreferrer">Datos históricos: Yahoo Finance</a>. Actualizado el <span id="data-date"></span>.</p>
+        </div>
+      </section>
+    </div>
+    <div class="notice" id="disclaimer" hidden><b>Importante:</b> esto es una simulación educativa, no una recomendación de inversión ni una predicción. Repite matemáticamente el rendimiento anual histórico, pero el valor real puede subir o bajar. No incluye impuestos, comisiones ni inflación. Los rendimientos pasados no garantizan resultados futuros.</div>
+    <p id="load-error" class="error" role="alert">Cargando datos históricos…</p>
+  </div>
+
+  <script>
+    const companies = [
+      { ticker: 'REP.MC', name: 'Repsol', color: '#d57646' },
+      { ticker: 'SAN.MC', name: 'Santander', color: '#d64f57' },
+      { ticker: 'BBVA.MC', name: 'BBVA', color: '#4c6fd6' },
+      { ticker: 'IBE.MC', name: 'Iberdrola', color: '#46956b' },
+      { ticker: 'ITX.MC', name: 'Inditex', color: '#8e69bd' }
+    ];
+    const euro = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+    const euroCents = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 });
+    const percent = new Intl.NumberFormat('es-ES', { style: 'percent', signDisplay: 'always', maximumFractionDigits: 1 });
+    const byTicker = {};
+    let data;
+
+    function buildInputs() {
+      const container = document.querySelector('#companies');
+      container.replaceChildren();
+      companies.forEach((company, index) => {
+        const row = document.createElement('label');
+        row.className = 'company-row';
+        row.innerHTML = `<span class="company-name"><i class="dot" style="background:${company.color}"></i><span><b>${company.name}</b><small>${company.ticker.replace('.MC','')} · Madrid</small></span></span><span class="money-entry"><span>€</span><input type="number" min="0" step="50" value="2000" inputmode="decimal" aria-label="Importe para ${company.name}" data-company="${index}"></span>`;
+        container.append(row);
+      });
     }
 
-    document.querySelector('#generate').addEventListener('click', generatePalette);
-    document.addEventListener('keydown', (event) => {
-      if (event.code === 'Space' && !['BUTTON', 'INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
-        event.preventDefault();
-        generatePalette();
+    function getCagr(series) {
+      const first = series[0], last = series[series.length - 1];
+      const years = (new Date(last.date) - new Date(first.date)) / (365.2425 * 86400000);
+      return Math.pow(last.adjustedClose / first.adjustedClose, 1 / years) - 1;
+    }
+
+    function amounts() { return [...document.querySelectorAll('[data-company]')].map(input => Math.max(0, Number(input.value) || 0)); }
+    function render() {
+      if (!data) return;
+      const capital = Math.max(0, Number(document.querySelector('#capital').value) || 0);
+      let years = Math.round(Number(document.querySelector('#years').value) || 1);
+      years = Math.min(10, Math.max(1, years));
+      document.querySelector('#years').value = years;
+      document.querySelector('#capital-label').textContent = euro.format(capital);
+      document.querySelector('#summary-caption').textContent = `En ${years} ${years === 1 ? 'año' : 'años'}, siguiendo el promedio histórico.`;
+
+      const invested = amounts();
+      const total = invested.reduce((sum, value) => sum + value, 0);
+      document.querySelector('#allocated').textContent = euro.format(total);
+      const over = total > capital + .001;
+      document.querySelector('#allocation-foot').classList.toggle('over', over);
+      document.querySelector('#error').textContent = over ? 'Has repartido más dinero del que tienes. Reduce algún importe para ver el cálculo.' : '';
+      document.querySelector('#total-invested').textContent = euro.format(total);
+      const breakdown = document.querySelector('#breakdown');
+      breakdown.replaceChildren();
+      let portfolioValue = 0;
+
+      companies.forEach((company, index) => {
+        const history = data.history[company.ticker];
+        const annual = getCagr(history);
+        const amount = invested[index];
+        const value = amount * Math.pow(1 + annual, years);
+        portfolioValue += value;
+        const row = document.createElement('tr');
+        const rateClass = annual >= 0 ? 'positive' : 'negative';
+        const gainClass = value >= amount ? 'positive' : 'negative';
+        row.innerHTML = `<td class="cell-company"><span style="color:${company.color}">●</span> ${company.name}</td><td class="${rateClass}">${percent.format(annual)}</td><td>${euro.format(amount)}</td><td class="${gainClass}">${euro.format(value)}</td>`;
+        breakdown.append(row);
+      });
+
+      const gain = portfolioValue - total;
+      document.querySelector('#total-estimated').textContent = euro.format(portfolioValue);
+      const gainNode = document.querySelector('#total-gain');
+      gainNode.textContent = `${gain >= 0 ? '+' : ''}${euro.format(gain)}`;
+      gainNode.classList.toggle('gain', gain >= 0);
+      gainNode.style.color = gain < 0 ? '#ffd0c8' : '';
+      if (over) {
+        document.querySelector('#total-estimated').textContent = '—';
+        gainNode.textContent = '—';
       }
-    });
-    generatePalette();
+      drawChart();
+    }
+
+    function drawChart() {
+      const canvas = document.querySelector('#history-chart');
+      const rect = canvas.getBoundingClientRect();
+      const ratio = window.devicePixelRatio || 1;
+      canvas.width = Math.max(1, rect.width * ratio);
+      canvas.height = Math.max(1, rect.height * ratio);
+      const ctx = canvas.getContext('2d');
+      ctx.scale(ratio, ratio);
+      const width = rect.width, height = rect.height;
+      const pad = { left: 34, right: 5, top: 8, bottom: 22 };
+      const graphW = width - pad.left - pad.right, graphH = height - pad.top - pad.bottom;
+      const series = companies.map(company => {
+        const rows = data.history[company.ticker];
+        const initial = rows[0].adjustedClose;
+        return { company, values: rows.map(row => row.adjustedClose / initial * 100) };
+      });
+      const all = series.flatMap(item => item.values);
+      const min = Math.floor(Math.min(...all) / 20) * 20;
+      const max = Math.ceil(Math.max(...all) / 20) * 20;
+      ctx.font = '10px system-ui';
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#89938b';
+      for (let i = 0; i <= 3; i++) {
+        const y = pad.top + graphH * i / 3;
+        const val = max - (max - min) * i / 3;
+        ctx.strokeStyle = '#edf0ed'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(width - pad.right, y); ctx.stroke();
+        ctx.fillText(`${Math.round(val)} €`, pad.left - 6, y + 3);
+      }
+      series.forEach(item => {
+        ctx.strokeStyle = item.company.color; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.beginPath();
+        item.values.forEach((value, i) => {
+          const x = pad.left + graphW * i / (item.values.length - 1);
+          const y = pad.top + graphH * (max - value) / (max - min || 1);
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+      });
+    }
+
+    async function start() {
+      try {
+        const response = await fetch('./data/historical-prices.json');
+        if (!response.ok) throw new Error('No se pudo leer el historial.');
+        data = await response.json();
+        companies.forEach(company => {
+          const rows = data.history?.[company.ticker];
+          if (!rows || rows.length < 100 || rows.some(row => !Number.isFinite(row.adjustedClose) || !Number.isFinite(row.close))) throw new Error(`Faltan datos históricos para ${company.name}.`);
+          byTicker[company.ticker] = rows;
+        });
+        buildInputs();
+        document.querySelector('#data-date').textContent = data.retrieved;
+        document.querySelector('#legend').innerHTML = companies.map(company => `<span class="legend-item"><i class="legend-line" style="background:${company.color}"></i>${company.name}</span>`).join('');
+        document.querySelector('#app').hidden = false;
+        document.querySelector('#disclaimer').hidden = false;
+        document.querySelector('#load-error').hidden = true;
+        document.querySelectorAll('#capital,#years,[data-company]').forEach(input => input.addEventListener('input', render));
+        document.querySelector('#split').addEventListener('click', () => {
+          const share = Math.floor((Math.max(0, Number(document.querySelector('#capital').value) || 0) / companies.length) * 100) / 100;
+          document.querySelectorAll('[data-company]').forEach(input => input.value = share.toFixed(2));
+          render();
+        });
+        render();
+        window.addEventListener('resize', drawChart);
+      } catch (error) {
+        document.querySelector('#load-error').textContent = `No se pudieron cargar los datos históricos: ${error.message}`;
+      }
+    }
+    start();
   </script>
 </body>
 </html>
