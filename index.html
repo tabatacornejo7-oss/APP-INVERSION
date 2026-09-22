@@ -32,7 +32,7 @@
     .input-wrap { display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid #e4dbd0; border-radius: 9px; background: #fffdf9; }
     .input-wrap:focus-within { border-color: #b68068; box-shadow: 0 0 0 3px #f2e7df; }
     .input-wrap span { color: #95877a; }
-    input[type="number"] { width: 100%; min-width: 0; padding: 11px 0; border: 0; outline: none; color: #342e29; background: transparent; font: inherit; font-weight: 700; }
+    input[type="text"] { width: 100%; min-width: 0; padding: 11px 0; border: 0; outline: none; color: #342e29; background: transparent; font: inherit; font-weight: 700; }
     .company-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin: 0 0 10px; }
     .company-heading strong { font-size: .85rem; }
     .company-heading span { color: #818a83; font-size: .73rem; }
@@ -61,9 +61,15 @@
     .chart-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
     .chart-caption { margin: 5px 0 0; color: var(--muted); font-size: .76rem; }
     .chart-legend { display: flex; flex-wrap: wrap; gap: 8px 12px; margin: 14px 0 3px; }
-    .legend-item { display: inline-flex; align-items: center; gap: 5px; color: #657168; font-size: .69rem; }
+    .legend-toggle { display: inline-flex; align-items: center; gap: 5px; padding: 4px 7px; border: 1px solid #e9e1d7; border-radius: 99px; color: #766c62; background: #fffdf9; font: inherit; font-size: .69rem; cursor: pointer; }
+    .legend-toggle[aria-pressed="false"] { opacity: .48; background: transparent; }
+    .legend-toggle:focus-visible { outline: 2px solid #b68068; outline-offset: 2px; }
     .legend-line { width: 12px; height: 3px; border-radius: 9px; }
-    canvas { display: block; width: 100%; height: 180px; }
+    .chart-plot { position: relative; }
+    canvas { display: block; width: 100%; height: 180px; touch-action: pan-y; cursor: crosshair; }
+    .chart-tooltip { position: absolute; top: 10px; right: 8px; display: none; max-width: calc(100% - 58px); padding: 9px 11px; border: 1px solid #e8ded2; border-radius: 9px; color: #55483d; background: #fffdf9f2; box-shadow: 0 3px 12px #46332412; font-size: .72rem; line-height: 1.45; pointer-events: none; }
+    .chart-tooltip strong, .chart-tooltip span { display: block; }
+    .chart-tooltip strong { margin-bottom: 3px; color: #342e29; font-size: .76rem; }
     .table-card { padding: 20px; }
     .table-scroll { overflow-x: auto; }
     table { width: 100%; margin-top: 12px; border-collapse: collapse; white-space: nowrap; }
@@ -101,11 +107,11 @@
         <div class="fields">
           <div class="field">
             <label for="capital">Dinero disponible</label>
-            <div class="input-wrap"><span>€</span><input id="capital" type="number" min="0" step="100" value="10000" inputmode="decimal"></div>
+            <div class="input-wrap"><span>€</span><input id="capital" type="text" value="10000" inputmode="decimal" autocomplete="off" aria-label="Dinero disponible en euros"></div>
           </div>
           <div class="field">
             <label for="years">Tiempo invertido</label>
-            <div class="input-wrap"><input id="years" type="number" min="1" max="10" step="1" value="3" inputmode="numeric"><span>años</span></div>
+            <div class="input-wrap"><input id="years" type="text" value="3" inputmode="numeric" maxlength="2" autocomplete="off" aria-label="Años de inversión"><span>años</span></div>
           </div>
         </div>
         <div class="company-heading"><strong>Tu reparto</strong><span>Importes en euros</span></div>
@@ -128,9 +134,12 @@
           <div style="margin-top:17px"><span class="metric-label">Ganancia o pérdida estimada</span><div class="metric-value gain" id="total-gain">—</div></div>
         </div>
         <div class="card chart-card">
-          <div class="chart-head"><div><h2 class="card-title">Así se movieron</h2><p class="chart-caption">Evolución histórica, iniciando todas en 100 €</p></div></div>
+          <div class="chart-head"><div><h2 class="card-title">Así se movieron</h2><p class="chart-caption">Toca una línea para ver cómo habría evolucionado tu importe.</p></div></div>
           <div class="chart-legend" id="legend"></div>
-          <canvas id="history-chart" role="img" aria-label="Gráfico de evolución histórica de las cinco acciones"></canvas>
+          <div class="chart-plot">
+            <canvas id="history-chart" role="img" aria-label="Gráfico interactivo de evolución histórica. Toca o desliza sobre una línea para ver el importe estimado."></canvas>
+            <div class="chart-tooltip" id="chart-tooltip" role="status" aria-live="polite"><strong></strong><span></span><span></span></div>
+          </div>
         </div>
         <div class="card table-card">
           <h2 class="card-title">Detalle por empresa</h2>
@@ -162,6 +171,17 @@
     const percent = new Intl.NumberFormat('es-ES', { style: 'percent', signDisplay: 'always', maximumFractionDigits: 1 });
     const byTicker = {};
     const data = JSON.parse(document.querySelector('#historical-data').textContent);
+    const visibleCompanies = new Set(companies.map(company => company.ticker));
+    let chartPointer = null;
+
+    function parseMoney(value) {
+      let text = String(value ?? '').trim().replace(/[\s\u00a0\u202f]/g, '');
+      if (!text) return 0;
+      if (text.includes(',')) text = text.replace(/\./g, '').replace(',', '.');
+      else if (/^-?\d{1,3}(\.\d{3})+$/.test(text)) text = text.replace(/\./g, '');
+      const number = Number(text);
+      return Number.isFinite(number) ? Math.max(0, number) : 0;
+    }
 
     function buildInputs() {
       const container = document.querySelector('#companies');
@@ -169,7 +189,7 @@
       companies.forEach((company, index) => {
         const row = document.createElement('label');
         row.className = 'company-row';
-        row.innerHTML = `<span class="company-name"><i class="dot" style="background:${company.color}"></i><span><b>${company.name}</b><small>${company.ticker.replace('.MC','')} · Madrid</small></span></span><span class="money-entry"><span>€</span><input type="number" min="0" step="50" value="2000" inputmode="decimal" aria-label="Importe para ${company.name}" data-company="${index}"></span>`;
+        row.innerHTML = `<span class="company-name"><i class="dot" style="background:${company.color}"></i><span><b>${company.name}</b><small>${company.ticker.replace('.MC','')} · Madrid</small></span></span><span class="money-entry"><span>€</span><input type="text" value="2000" inputmode="decimal" autocomplete="off" aria-label="Importe para ${company.name} en euros" data-company="${index}"></span>`;
         container.append(row);
       });
     }
@@ -180,11 +200,11 @@
       return Math.pow(last.adjustedClose / first.adjustedClose, 1 / years) - 1;
     }
 
-    function amounts() { return [...document.querySelectorAll('[data-company]')].map(input => Math.max(0, Number(input.value) || 0)); }
+    function amounts() { return [...document.querySelectorAll('[data-company]')].map(input => parseMoney(input.value)); }
     function render() {
       if (!data) return;
-      const capital = Math.max(0, Number(document.querySelector('#capital').value) || 0);
-      let years = Math.round(Number(document.querySelector('#years').value) || 1);
+      const capital = parseMoney(document.querySelector('#capital').value);
+      let years = Math.round(parseMoney(document.querySelector('#years').value) || 1);
       years = Math.min(10, Math.max(1, years));
       document.querySelector('#years').value = years;
       document.querySelector('#capital-label').textContent = euro.format(capital);
@@ -238,11 +258,19 @@
       const width = rect.width, height = rect.height;
       const pad = { left: 42, right: 5, top: 8, bottom: 27 };
       const graphW = width - pad.left - pad.right, graphH = height - pad.top - pad.bottom;
-      const series = companies.map(company => {
+      const series = companies.filter(company => visibleCompanies.has(company.ticker)).map(company => {
         const rows = data.history[company.ticker];
         const initial = rows[0].adjustedClose;
         return { company, values: rows.map(row => row.adjustedClose / initial * 100) };
       });
+      ctx.font = '10px system-ui';
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#89938b';
+      if (!series.length) {
+        ctx.fillText('Activa una empresa para ver su historial', width - pad.right, height / 2);
+        document.querySelector('#chart-tooltip').style.display = 'none';
+        return;
+      }
       const all = series.flatMap(item => item.values);
       const min = Math.floor(Math.min(...all) / 20) * 20;
       const max = Math.ceil(Math.max(...all) / 20) * 20;
@@ -268,6 +296,11 @@
         ctx.fillText(row.date.slice(0, 4), x, height - 5);
         lastYearLabelX = x;
       });
+      const index = chartPointer ? Math.max(0, Math.min(series[0].values.length - 1, chartPointer.index)) : -1;
+      if (index >= 0 && series.some(item => item.company.ticker === chartPointer.ticker)) {
+        const x = pad.left + graphW * index / (series[0].values.length - 1);
+        ctx.strokeStyle = '#a99a89'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, pad.top + graphH); ctx.stroke(); ctx.setLineDash([]);
+      }
       series.forEach(item => {
         ctx.strokeStyle = item.company.color; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.beginPath();
         item.values.forEach((value, i) => {
@@ -276,6 +309,77 @@
           if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         });
         ctx.stroke();
+        if (index >= 0 && item.company.ticker === chartPointer.ticker) {
+          const x = pad.left + graphW * index / (item.values.length - 1);
+          const y = pad.top + graphH * (max - item.values[index]) / (max - min || 1);
+          ctx.fillStyle = item.company.color; ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = '#fffdf9'; ctx.lineWidth = 2; ctx.stroke();
+        }
+      });
+      updateChartTooltip();
+    }
+
+    function updateChartTooltip() {
+      const tooltip = document.querySelector('#chart-tooltip');
+      const company = chartPointer && companies.find(item => item.ticker === chartPointer.ticker);
+      if (!company || !visibleCompanies.has(company.ticker)) { tooltip.style.display = 'none'; return; }
+      const history = data.history[company.ticker];
+      const row = history[chartPointer.index];
+      const amount = amounts()[companies.indexOf(company)];
+      const value = amount * row.adjustedClose / history[0].adjustedClose;
+      const gain = value - amount;
+      const spans = tooltip.querySelectorAll('span');
+      tooltip.querySelector('strong').textContent = `${company.name} · ${row.date}`;
+      spans[0].textContent = `Valor estimado: ${euroCents.format(value)}`;
+      spans[1].textContent = `Ganancia/pérdida: ${gain >= 0 ? '+' : ''}${euroCents.format(gain)}`;
+      tooltip.style.display = 'block';
+    }
+
+    function handleChartPointer(event) {
+      const canvas = document.querySelector('#history-chart');
+      const rect = canvas.getBoundingClientRect();
+      const width = rect.width, height = rect.height;
+      const pad = { left: 42, right: 5, top: 8, bottom: 27 };
+      const graphW = width - pad.left - pad.right, graphH = height - pad.top - pad.bottom;
+      const x = event.clientX - rect.left, y = event.clientY - rect.top;
+      if (x < pad.left || x > width - pad.right || y < pad.top || y > pad.top + graphH) return;
+      const historyLength = data.history[companies[0].ticker].length;
+      const index = Math.round((x - pad.left) / graphW * (historyLength - 1));
+      const active = companies.filter(company => visibleCompanies.has(company.ticker));
+      if (!active.length) return;
+      const values = active.flatMap(company => data.history[company.ticker].map(row => row.adjustedClose / data.history[company.ticker][0].adjustedClose * 100));
+      const min = Math.floor(Math.min(...values) / 20) * 20;
+      const max = Math.ceil(Math.max(...values) / 20) * 20;
+      const nearest = active.map(company => {
+        const rows = data.history[company.ticker];
+        const value = rows[index].adjustedClose / rows[0].adjustedClose * 100;
+        const lineY = pad.top + graphH * (max - value) / (max - min || 1);
+        return { ticker: company.ticker, distance: Math.abs(y - lineY) };
+      }).sort((a, b) => a.distance - b.distance)[0];
+      if (!nearest || nearest.distance > 30) { chartPointer = null; document.querySelector('#chart-tooltip').style.display = 'none'; drawChart(); return; }
+      chartPointer = { index, ticker: nearest.ticker };
+      drawChart();
+    }
+
+    function buildLegend() {
+      const legend = document.querySelector('#legend');
+      legend.replaceChildren();
+      companies.forEach(company => {
+        const button = document.createElement('button');
+        button.type = 'button'; button.className = 'legend-toggle'; button.dataset.ticker = company.ticker;
+        button.setAttribute('aria-pressed', 'true');
+        button.setAttribute('aria-label', `Ocultar ${company.name} del gráfico`);
+        button.innerHTML = `<i class="legend-line" style="background:${company.color}"></i>${company.name}`;
+        button.addEventListener('click', () => {
+          if (visibleCompanies.has(company.ticker)) visibleCompanies.delete(company.ticker);
+          else visibleCompanies.add(company.ticker);
+          const visible = visibleCompanies.has(company.ticker);
+          button.setAttribute('aria-pressed', String(visible));
+          button.setAttribute('aria-label', `${visible ? 'Ocultar' : 'Mostrar'} ${company.name} ${visible ? 'del' : 'en el'} gráfico`);
+          if (chartPointer?.ticker === company.ticker && !visible) chartPointer = null;
+          drawChart();
+        });
+        legend.append(button);
       });
     }
 
@@ -288,17 +392,23 @@
         });
         buildInputs();
         document.querySelector('#data-date').textContent = data.retrieved;
-        document.querySelector('#legend').innerHTML = companies.map(company => `<span class="legend-item"><i class="legend-line" style="background:${company.color}"></i>${company.name}</span>`).join('');
+        buildLegend();
         document.querySelector('#app').hidden = false;
         document.querySelector('#disclaimer').hidden = false;
         document.querySelector('#load-error').hidden = true;
         document.querySelectorAll('#capital,#years,[data-company]').forEach(input => input.addEventListener('input', render));
         document.querySelector('#split').addEventListener('click', () => {
-          const share = Math.floor((Math.max(0, Number(document.querySelector('#capital').value) || 0) / companies.length) * 100) / 100;
+          const share = Math.floor((parseMoney(document.querySelector('#capital').value) / companies.length) * 100) / 100;
           document.querySelectorAll('[data-company]').forEach(input => input.value = share.toFixed(2));
           render();
         });
         render();
+        const canvas = document.querySelector('#history-chart');
+        canvas.addEventListener('pointermove', handleChartPointer);
+        canvas.addEventListener('pointerdown', handleChartPointer);
+        canvas.addEventListener('pointerleave', event => {
+          if (event.pointerType === 'mouse') { chartPointer = null; drawChart(); }
+        });
         window.addEventListener('resize', drawChart);
       } catch (error) {
         document.querySelector('#load-error').textContent = `No se pudieron cargar los datos históricos: ${error.message}`;
