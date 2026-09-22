@@ -206,7 +206,6 @@
       const capital = parseMoney(document.querySelector('#capital').value);
       let years = Math.round(parseMoney(document.querySelector('#years').value) || 1);
       years = Math.min(10, Math.max(1, years));
-      document.querySelector('#years').value = years;
       document.querySelector('#capital-label').textContent = euro.format(capital);
       document.querySelector('#summary-caption').textContent = `En ${years} ${years === 1 ? 'año' : 'años'}, siguiendo el promedio histórico.`;
 
@@ -397,6 +396,13 @@
         document.querySelector('#disclaimer').hidden = false;
         document.querySelector('#load-error').hidden = true;
         document.querySelectorAll('#capital,#years,[data-company]').forEach(input => input.addEventListener('input', render));
+        document.querySelectorAll('#capital,#years,[data-company]').forEach(input => input.addEventListener('focus', () => input.select()));
+        const yearsInput = document.querySelector('#years');
+        yearsInput.addEventListener('blur', () => {
+          const entered = Math.round(parseMoney(yearsInput.value));
+          yearsInput.value = String(Math.min(10, Math.max(1, entered || 3)));
+          render();
+        });
         document.querySelector('#split').addEventListener('click', () => {
           const share = Math.floor((parseMoney(document.querySelector('#capital').value) / companies.length) * 100) / 100;
           document.querySelectorAll('[data-company]').forEach(input => input.value = share.toFixed(2));
